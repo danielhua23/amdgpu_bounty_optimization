@@ -172,13 +172,15 @@ string extract_regex_match(const string& text, const regex& pattern, int group =
     return "";
 }
 
-string get_leaderboard_url(const string& isl, const string& osl) {
+string get_leaderboard_url(const string& isl, const string& osl, int conc) {
     string key = isl + "_" + osl;
-    if (key == "8192_1024") {
-        return "https://daniehua-dsr1-fp4-isl8192osl1024.hf.space";
-    } else {
+    if (key != "8192_1024") {
         return "ERROR: wrong isl and osl config, pls check";
     }
+    if (conc == 4) return "https://daniehua-dsr1-fp4-isl8192-osl1024-conc4.hf.space";
+    if (conc == 32) return "https://daniehua-dsr1-fp4-isl8192-osl1024-conc32.hf.space";
+    if (conc == 128) return "https://daniehua-dsr1-fp4-isl8192-osl1024-conc128.hf.space";
+    return "ERROR: CONC must be 4, 32, or 128";
 }
 
 // ============================================
@@ -517,38 +519,18 @@ try:
     baseline_key = (isl, osl, conc)
     if baseline_key in BASELINES:
         baseline_data = BASELINES[baseline_key]
-        summary_data['baseline_nv1126'] = {
-            'baseline_median_e2e_1126': baseline_data['median_e2e'],
-            'baseline_tput_pergpu_1126': baseline_data['tput_per_gpu'],
-            'baseline_median_intvty_1126': baseline_data['median_intvty']
+        summary_data['baseline'] = {
+            'baseline_median_e2e': baseline_data['median_e2e'],
+            'baseline_tput_per_gpu': baseline_data['tput_per_gpu'],
+            'baseline_median_intvty': baseline_data['median_intvty']
         }
-        
-        if baseline_data['tput_per_gpu'] > 0:
-            summary_data['tput_per_gpu_ratio_vs_baseline_1126'] = mi355x_tput_per_gpu / baseline_data['tput_per_gpu']
-        else:
-            summary_data['tput_per_gpu_ratio_vs_baseline_1126'] = 0.0
-        
-        if baseline_data['median_e2e'] > 0:
-            summary_data['median_e2e_ratio_vs_baseline_1126'] = mi355x_median_e2e / baseline_data['median_e2e']
-        else:
-            summary_data['median_e2e_ratio_vs_baseline_1126'] = 0.0
-        
-        if baseline_data['median_intvty'] > 0:
-            summary_data['interactivity_ratio_vs_baseline_1126'] = summary_data['interactivity'] / baseline_data['median_intvty']
-        else:
-            summary_data['interactivity_ratio_vs_baseline_1126'] = 0.0
-        
         print(f'INFO: baseline found for ISL={isl}, OSL={osl}, CONC={conc}')
-        print(f'INFO: Throughput ratio (MI355X/baseline, higher is better!): {summary_data["tput_per_gpu_ratio_vs_baseline_1126"]:.4f}')
-        print(f'INFO: E2E latency ratio (MI355X/baseline, lower is better!): {summary_data["median_e2e_ratio_vs_baseline_1126"]:.4f}')
-        print(f'INFO: Interactivity: {summary_data["interactivity"]:.2f} tokens/s/user')
-        print(f'INFO: Interactivity ratio (MI355X/baseline, higher is better!): {summary_data["interactivity_ratio_vs_baseline_1126"]:.4f}')
+        print(f'INFO: Throughput: {mi355x_tput_per_gpu:.2f} tokens/s/GPU (min required: {baseline_data["tput_per_gpu"]})')
+        print(f'INFO: E2E (median): {mi355x_median_e2e:.2f} ms (max allowed: {baseline_data["median_e2e"]})')
+        print(f'INFO: Interactivity: {summary_data["interactivity"]:.2f} tokens/s/user (min required: {baseline_data["median_intvty"]})')
     else:
         print(f'WARNING: No baseline found for ISL={isl}, OSL={osl}, CONC={conc}')
-        summary_data['baseline_nv1126'] = None
-        summary_data['tput_per_gpu_ratio_vs_baseline_1126'] = None
-        summary_data['median_e2e_ratio_vs_baseline_1126'] = None
-        summary_data['interactivity_ratio_vs_baseline_1126'] = None
+        summary_data['baseline'] = None
     
     # Add accuracy metrics
     summary_data['accuracy'] = {
@@ -642,28 +624,21 @@ try:
     else:
         interactivity = 0.0
     
-    baseline = data.get('baseline_nv1126', {})
+    baseline = data.get('baseline', {})
     if baseline:
-        baseline_e2e = baseline.get('baseline_median_e2e_1126', 0.0)
-        baseline_throughput = baseline.get('baseline_tput_pergpu_1126', 0.0)
-        baseline_interactivity = baseline.get('baseline_median_intvty_1126', 0.0)
+        baseline_e2e = baseline.get('baseline_median_e2e', 0.0)
+        baseline_throughput = baseline.get('baseline_tput_per_gpu', 0.0)
+        baseline_interactivity = baseline.get('baseline_median_intvty', 0.0)
     else:
         baseline_e2e = 0.0
         baseline_throughput = 0.0
         baseline_interactivity = 0.0
     
-    e2e_ratio = data.get('median_e2e_ratio_vs_baseline_1126', 0.0)
-    throughput_ratio = data.get('tput_per_gpu_ratio_vs_baseline_1126', 0.0)
-    interactivity_ratio = data.get('interactivity_ratio_vs_baseline_1126', 0.0)
-    
-    if e2e_ratio is None: e2e_ratio = 0.0
-    if throughput_ratio is None: throughput_ratio = 0.0
-    if interactivity_ratio is None: interactivity_ratio = 0.0
-    
     acc = data.get('accuracy', {})
     gsm8k_metric = acc.get('gsm8k_metric', 0.0)
     
-    print(f'{mi355x_e2e},{mi355x_throughput},{baseline_e2e},{baseline_throughput},{e2e_ratio},{throughput_ratio},{interactivity},{baseline_interactivity},{interactivity_ratio},{gsm8k_metric}')
+    # Output for leaderboard submit (no ratio fields)
+    print(f'{mi355x_e2e},{mi355x_throughput},{baseline_e2e},{baseline_throughput},{interactivity},{baseline_interactivity},{gsm8k_metric}')
 except Exception as e:
     print(f'ERROR: {e}', file=sys.stderr)
     sys.exit(1)
@@ -694,7 +669,7 @@ except Exception as e:
         values.push_back(token);
     }
     
-    if (values.size() < 10) {
+    if (values.size() < 7) {
         cerr << "ERROR: Invalid metrics output" << endl;
         return 1;
     }
@@ -703,28 +678,21 @@ except Exception as e:
     double mi355x_throughput = stod(values[1]);
     double baseline_e2e = stod(values[2]);
     double baseline_throughput = stod(values[3]);
-    double e2e_ratio = stod(values[4]);
-    double throughput_ratio = stod(values[5]);
-    double interactivity = stod(values[6]);
-    double baseline_interactivity = stod(values[7]);
-    double interactivity_ratio = stod(values[8]);
-    double gsm8k_metric = stod(values[9]);
+    double interactivity = stod(values[4]);
+    double baseline_interactivity = stod(values[5]);
+    double gsm8k_metric = stod(values[6]);
     
     // Display metrics
     cout << "\nConfiguration:" << endl;
     cout << "  CONC: " << cfg.conc << endl;
     cout << "\nMI355X Performance:" << endl;
-    cout << "  E2E (median): " << mi355x_e2e << "ms" << endl;
+    cout << "  E2E (median): " << mi355x_e2e << " ms" << endl;
     cout << "  Throughput per GPU: " << mi355x_throughput << " tokens/s" << endl;
     cout << "  Interactivity: " << interactivity << " tokens/s/user" << endl;
-    cout << "\nBaseline (NV-1126):" << endl;
-    cout << "  E2E (median): " << baseline_e2e << "ms" << endl;
+    cout << "\nBaseline (thresholds):" << endl;
+    cout << "  E2E (median): " << baseline_e2e << " ms" << endl;
     cout << "  Throughput per GPU: " << baseline_throughput << " tokens/s" << endl;
     cout << "  Interactivity: " << baseline_interactivity << " tokens/s/user" << endl;
-    cout << "\nPerformance Ratios (MI355X / baseline):" << endl;
-    cout << "  E2E Ratio: " << e2e_ratio << endl;
-    cout << "  Throughput Ratio: " << throughput_ratio << endl;
-    cout << "  Interactivity Ratio: " << interactivity_ratio << endl;
     cout << "\nAccuracy metrics:" << endl;
     cout << "  GSM8K Metric: " << gsm8k_metric << endl;
     
@@ -741,11 +709,8 @@ except Exception as e:
              << mi355x_throughput << ", "
              << baseline_e2e << ", "
              << baseline_throughput << ", "
-             << e2e_ratio << ", "
-             << throughput_ratio << ", "
              << interactivity << ", "
              << baseline_interactivity << ", "
-             << interactivity_ratio << ", "
              << gsm8k_metric
              << "]}'";
     
@@ -782,7 +747,7 @@ int run_single_test(Config cfg, const AccuracyMetrics& acc_metrics) {
         if (!cfg.lb_url_override.empty()) {
             lb_url = cfg.lb_url_override;
         } else {
-            lb_url = get_leaderboard_url(to_string(cfg.isl), to_string(cfg.osl));
+            lb_url = get_leaderboard_url(to_string(cfg.isl), to_string(cfg.osl), cfg.conc);
         }
         cout << "Leaderboard: " << lb_url << endl;
     }
@@ -818,7 +783,7 @@ int run_single_test(Config cfg, const AccuracyMetrics& acc_metrics) {
         if (!cfg.lb_url_override.empty()) {
             lb_url = cfg.lb_url_override;
         } else {
-            lb_url = get_leaderboard_url(to_string(cfg.isl), to_string(cfg.osl));
+            lb_url = get_leaderboard_url(to_string(cfg.isl), to_string(cfg.osl), cfg.conc);
         }
         
         if (submit_to_leaderboard(cfg, lb_url) != 0) {
@@ -846,11 +811,9 @@ int run_multi_conc_mode(Config cfg) {
         return 1;
     }
     cout << "CONC values: 4, 32, 128" << endl;
-    string lb_url;
     if (cfg.mode == "submit") {
         cout << "Team: " << cfg.team_name << endl;
-        lb_url = get_leaderboard_url(cfg.isl_arg, cfg.osl_arg);
-        cout << "Leaderboard: " << lb_url << endl;
+        cout << "Leaderboard: per-CONC (CONC=4, 32, 128 each submit to own leaderboard)" << endl;
     }
     cout << "============================================" << endl;
     cout << endl;
@@ -905,7 +868,8 @@ int run_multi_conc_mode(Config cfg) {
         set_env_var("RESULT_FILENAME", batch_results_dir + "/" + result_filename);
         
         if (cfg.mode == "submit") {
-            set_env_var("LB_URL_OVERRIDE", lb_url);
+            string conc_lb_url = get_leaderboard_url(cfg.isl_arg, cfg.osl_arg, conc);
+            set_env_var("LB_URL_OVERRIDE", conc_lb_url);
         }
         
         // Run single test by calling this binary recursively

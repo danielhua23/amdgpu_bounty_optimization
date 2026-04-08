@@ -247,8 +247,10 @@ source all_conc_var.sh
 ./dsr1_benchmark perf -isl 8192 -osl 1024
 ```
 
-**Results auto-submit to Leaderboard**:
-- ISL=8192, OSL=1024 → https://daniehua-dsr1-fp4-isl8192osl1024.hf.space
+**Results auto-submit to the leaderboard for the corresponding CONC** (one leaderboard per concurrency):
+- CONC 4 → [Leaderboard](https://daniehua-dsr1-fp4-isl8192-osl1024-conc4.hf.space)
+- CONC 32 → [Leaderboard](https://daniehua-dsr1-fp4-isl8192-osl1024-conc32.hf.space)
+- CONC 128 → [Leaderboard](https://daniehua-dsr1-fp4-isl8192-osl1024-conc128.hf.space)
 
 **Submission Content**: Each CONC configuration submits independently, including:
 - Team name + CONC value
@@ -303,11 +305,9 @@ All metrics must be:
 
 **Auto-comparison feature**: Each result JSON automatically includes baseline data and performance ratios!
 
-**Performance Ratio Interpretation**:
-- `tput_per_gpu_ratio_vs_1126 > 1.0` = MI355X has higher throughput ✅
-- `median_e2e_ratio_vs_1126 < 1.0` = MI355X has lower latency ✅
+**Performance comparison**: Compare your result with the baseline thresholds in the result JSON.
 
-See `baseline_nv1126` field in result JSON for details.
+See `baseline` field in result JSON for threshold values.
 
 ## Optimization Directions
 
@@ -369,8 +369,10 @@ source all_conc_var.sh
 - ✅ Save all results to independent directory
 - ✅ Generate summary report
 
-**Leaderboard**:
-- ISL=8192, OSL=1024 → https://daniehua-dsr1-fp4-isl8192osl1024.hf.space
+**Leaderboard (per CONC)**:
+- CONC 4: https://daniehua-dsr1-fp4-isl8192-osl1024-conc4.hf.space
+- CONC 32: https://daniehua-dsr1-fp4-isl8192-osl1024-conc32.hf.space
+- CONC 128: https://daniehua-dsr1-fp4-isl8192-osl1024-conc128.hf.space
 
 **Result Output Example**:
 ```
@@ -382,7 +384,7 @@ OSL: 1024
 Mode: submit
 CONC values: 4, 32, 128
 Team: YourTeam
-Leaderboard: https://daniehua-dsr1-fp4-isl8192osl1024.hf.space
+Leaderboard: per-CONC (CONC=4, 32, 128 each submit to own leaderboard)
 ============================================
 
 Results directory: batch_isl8192_osl1024_20251125_150000
@@ -537,7 +539,7 @@ Round 5: Batch Submission
 ## Resource Links
 
 - 🔧 [SGLang GitHub](https://github.com/sgl-project/sglang) - Inference framework
-- 📊 Leaderboard (only 8k/1k): [ISL=8192, OSL=1024](https://daniehua-dsr1-fp4-isl8192osl1024.hf.space)
+- 📊 Leaderboards (one per CONC): [CONC 4](https://daniehua-dsr1-fp4-isl8192-osl1024-conc4.hf.space) · [CONC 32](https://daniehua-dsr1-fp4-isl8192-osl1024-conc32.hf.space) · [CONC 128](https://daniehua-dsr1-fp4-isl8192-osl1024-conc128.hf.space)
 
 
 **Good luck! 🚀**
